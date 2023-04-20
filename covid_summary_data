@@ -1,0 +1,47 @@
+-- From the Big Query dataset and table, create a new table with what I plan on using
+-- Add in data only for state 56 (WY)
+create table covid_project_april.covid_totals as
+select date, state, tests_total, cases_positive_total, deaths_total, hospitalizations_total, icu_total, ventilator_total
+from `bigquery-public-data.covid19_covidtracking.summary`
+where state = '56';
+
+-- Get the average monthly positive cases in 2020
+SELECT EXTRACT(MONTH FROM date) AS month, AVG(cases_positive_total) AS avg_cases
+FROM `covid_project_april.covid_totals`
+WHERE EXTRACT(YEAR FROM date) = 2020
+GROUP BY month
+ORDER BY month ASC;
+
+-- Same as above but ignore the null values, if any
+SELECT EXTRACT(MONTH FROM date) AS month, AVG(cases_positive_total) AS avg_cases
+FROM `covid_project_april.covid_totals`
+WHERE cases_positive_total IS NOT NULL AND EXTRACT(YEAR FROM date) = 2020
+GROUP BY month
+ORDER BY month ASC;
+
+-- Get the total number of positive cases in 2020 (no data for Jan/Feb)
+SELECT SUM(cases_positive_total) as total_cases_2020
+FROM covid_project_april.covid_totals
+WHERE date BETWEEN '2020-01-01' AND '2020-12-31';
+
+-- Get the percentage of positive cases that result in death
+SELECT
+  (deaths_total / cases_positive_total) * 100 AS death_percentage
+FROM
+  covid_project_april.covid_totals
+WHERE cases_positive_total IS NOT NULL AND deaths_total IS NOT NULL AND
+  cases_positive_total > 0;
+
+-- Get the percentage of deaths grouped by month
+SELECT
+  DATE_TRUNC(date, MONTH) AS month,
+  AVG(deaths_total / cases_positive_total)*100 AS death_percentage
+FROM
+  covid_project_april.covid_totals
+WHERE
+  date BETWEEN '2020-01-01' AND '2020-12-31'
+  AND cases_positive_total IS NOT NULL AND deaths_total IS NOT NULL
+GROUP BY
+  month
+ORDER BY
+  month ASC;
